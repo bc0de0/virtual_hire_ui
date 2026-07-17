@@ -1,0 +1,25 @@
+import { createBrowserRouter } from 'react-router-dom'
+import { AppShell } from '../components/shared/app-shell'
+import { DashboardPage } from '../features/dashboard/dashboard-page'
+import { CandidateUploadPage } from '../features/candidates/candidate-upload-page'
+import { InterviewSchedulePage, LiveInterviewPage, InterviewReviewPage } from '../features/interviews'
+import { VerdictReportPage } from '../features/verdicts/verdict-report-page'
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <AppShell />,
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: 'candidates/upload', element: <CandidateUploadPage /> },
+      { path: 'interviews/schedule', element: <InterviewSchedulePage /> },
+      { path: 'interviews/live', element: <LiveInterviewPage /> },
+      { path: 'interviews/review', element: <InterviewReviewPage /> },
+      { path: 'verdicts/report', element: <VerdictReportPage /> },
+      {
+        path: 'settings',
+        element: <div className="rounded-2xl border border-slate-200 bg-white p-8 text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">Settings screen placeholder for org and user preferences.</div>,
+      },
+    ],
+  },
+])
