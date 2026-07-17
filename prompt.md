@@ -28,4 +28,10 @@ A running log of the prompts given to Claude Code for this project, in order. Se
 
 ---
 
+## 2026-07-17 — Prompt 5
+
+> the backend for this repo exists at - https://github.com/bc0de0/virtual_hire.git and locally in c drive projects/bc0de0 dir with the name virtual_hire. Optimize the UI (current repo) for the said backend
+
+---
+
 <!-- Append new prompts below this line, newest at the bottom, in the same "## YYYY-MM-DD — Prompt N" format. -->

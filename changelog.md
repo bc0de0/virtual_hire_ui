@@ -33,3 +33,21 @@ Tracks what actually changed in response to each prompt in [prompt.md](prompt.md
 - Added `prompt.md` and `changelog.md` to the repo root.
 - Added remote `origin` pointing to `https://github.com/bc0de0/virtual_hire_ui.git`.
 - Pushed the initial commit to `main`.
+
+## 2026-07-17 — Prompt 5: Align frontend to the virtual_hire backend contract
+
+- Investigated `bc0de0/virtual_hire` (local checkout at `Projects/bc0de0/virtual_hire`) and found it's a **schema/docs-only scaffold** — the only implemented route is `/health`; no models, schemas, auth, CORS, or WebSocket support exist in code. The full domain model is precisely specified in its `docs/05-data-model.md` and `EPIC.md`, though unimplemented.
+- Asked the user how to proceed given no live API exists; they chose to align the frontend's types/mocks to the documented spec so the shape is a drop-in match once the backend ships real endpoints.
+- Rewrote `src/types/index.ts` to mirror the backend's Postgres schema field-for-field (snake_case field names, matching the wire format FastAPI/Pydantic v2 will emit with no camelCase aliasing configured): `Candidate`, `Resume`, `JobRequisition`, `Application`, `Interview`, `Transcript`, `ProctoringSession`, `ProctoringEvent`, `Verdict`, plus every documented status/enum value.
+- Rewrote `src/api/fixtures.ts` with mock data matching the new types and realistic enum values.
+- Reworked every page to consume the real vocabulary instead of invented fields:
+  - **Dashboard** — application status badges (`submitted`/`screening`/`interviewing`/`offer`/`hired`/`rejected`/`withdrawn`) and `verdict_label` (`pass`/`review`/`fail`) replace the old fabricated `stage` and numeric `score` fields that don't exist on the backend.
+  - **Upload** — resume ingestion status (`uploaded`/`parsing`/`parsed`/`parse_failed`, with `parse_error` shown on failure) replaces a static "Ready" badge.
+  - **Schedule** — video conference details now come from `ProctoringSession` (`platform` + `external_meeting_ref`), since `Interview` itself carries no link/channel field on the backend; interviews without a session show "not yet configured."
+  - **Proctoring** (renamed from "Live" — see below) — shows session status, the two-party consent gate (`candidate_consented_at`/`interviewer_consented_at`), and detected signals using the real `event_type` enum (`multiple_faces_detected`, `gaze_away`, `background_voice_detected`, etc.), replacing invented event types like `tab-switch` that have no backend equivalent.
+  - **Review** — transcript renders from a single ingested text blob with `status`/`source`, matching the backend's `Transcript` model, instead of a fabricated array of speaker/timestamp segments the schema doesn't support.
+  - **Verdict** — shows `verdict_label`, `narrative`, `stale`, and the raw `deterministic_score` JSONB key/value pairs, replacing an invented `recommendation`/`confidence`/`strengths`/`gaps`/`citations` shape with no backend counterpart.
+- **Flagged and corrected a product-level mismatch**: the "Live Interview" page's real-time monitoring framing directly contradicts the backend's invariant I15 ("proctoring analysis is always asynchronous and advisory... never intervenes in a live interview session"). Renamed the nav entry to "Proctoring" and rewrote the page to reflect async, post-hoc, consent-gated analysis instead of an in-call recording view.
+- Also dropped `interview.status = 'In Progress'` (not a valid backend enum value — only `scheduled`/`completed`/`cancelled`/`no_show` exist) and made the header's "N interviews scheduled" pill derive from real fixture data instead of a hardcoded "12 interviews today."
+- Fixed a bug caught during verification: a formatting heuristic in the verdict page guessed any number ≤1 was a percentage, incorrectly rendering an integer count (`requirement_gaps: 1`) as "100%". Since the backend docs explicitly leave `deterministic_score`'s JSONB shape unfixed, removed the guess and render values as-is.
+- Verified `npm run build` and `npm run lint` pass, and visually confirmed every route in both themes via headless-browser screenshots with zero console errors.

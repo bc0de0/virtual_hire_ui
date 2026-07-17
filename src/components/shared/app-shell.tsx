@@ -4,12 +4,13 @@ import { useMemo, useState } from 'react'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 import { useThemeStore } from '../../stores/theme-store'
+import { interviews } from '../../api/fixtures'
 
 const navigation = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/candidates/upload', label: 'Upload', icon: Upload },
   { to: '/interviews/schedule', label: 'Schedule', icon: CalendarClock },
-  { to: '/interviews/live', label: 'Live', icon: Video },
+  { to: '/interviews/live', label: 'Proctoring', icon: Video },
   { to: '/interviews/review', label: 'Review', icon: MessagesSquare },
   { to: '/verdicts/report', label: 'Verdict', icon: BadgeCheck },
   { to: '/settings', label: 'Settings', icon: Settings },
@@ -20,6 +21,7 @@ export function AppShell() {
   const year = useMemo(() => new Date().getFullYear(), [])
   const theme = useThemeStore((state) => state.theme)
   const toggleTheme = useThemeStore((state) => state.toggleTheme)
+  const scheduledCount = interviews.filter((interview) => interview.status === 'scheduled').length
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -85,7 +87,7 @@ export function AppShell() {
               <div className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Live sync • mock</div>
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                12 interviews today
+                {scheduledCount} interviews scheduled
               </div>
             </div>
           </header>

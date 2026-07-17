@@ -1,13 +1,26 @@
 import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, Link2, Video } from 'lucide-react'
 import { request } from '../../api/client'
-import { interviews } from '../../api/fixtures'
+import { interviews, proctoringSession } from '../../api/fixtures'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
+import type { InterviewStatus } from '../../types'
 
 async function fetchInterviews() {
-  return request('interviews', async () => interviews)
+  return request('interviews', async () =>
+    interviews.map((interview) => ({
+      interview,
+      session: interview.id === proctoringSession.interview_id ? proctoringSession : null,
+    })),
+  )
+}
+
+const interviewStatusClasses: Record<InterviewStatus, string> = {
+  scheduled: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300',
+  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
+  cancelled: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
+  no_show: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300',
 }
 
 export function InterviewSchedulePage() {
@@ -45,19 +58,25 @@ export function InterviewSchedulePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Video conference link</CardTitle>
+          <CardTitle>Video conference</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3">
-            {(data ?? []).map((interview) => (
+            {(data ?? []).map(({ interview, session }) => (
               <div key={interview.id} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-800 dark:bg-slate-900/70">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-slate-900 dark:text-slate-100">{interview.candidateName}</p>
-                  <Badge className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">{interview.status}</Badge>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">{interview.candidate_name}</p>
+                  <Badge className={interviewStatusClasses[interview.status]}>{interview.status.replace('_', ' ')}</Badge>
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                   <Link2 size={16} className="text-indigo-600 dark:text-indigo-400" />
-                  <span className="truncate">{interview.link}</span>
+                  {session ? (
+                    <span className="truncate">
+                      <span className="capitalize">{session.platform.replace('_', ' ')}</span> · {session.external_meeting_ref}
+                    </span>
+                  ) : (
+                    <span className="truncate text-slate-400 dark:text-slate-500">Video platform not yet configured</span>
+                  )}
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {[1, 2].map((tile) => (

@@ -1,15 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
 import { AudioLines, PlayCircle } from 'lucide-react'
 import { request } from '../../api/client'
-import { transcriptSegments } from '../../api/fixtures'
+import { transcript } from '../../api/fixtures'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
+import type { TranscriptStatus } from '../../types'
 
 async function fetchReviewData() {
-  return request('review', async () => ({ transcript: transcriptSegments }))
+  return request('review', async () => transcript)
+}
+
+const transcriptStatusLabels: Record<TranscriptStatus, string> = {
+  pending: 'Pending ingestion',
+  available: 'Available',
+  unavailable: 'Unavailable',
+}
+
+const transcriptStatusClasses: Record<TranscriptStatus, string> = {
+  pending: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300',
+  available: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
+  unavailable: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
 }
 
 export function InterviewReviewPage() {
   const { data } = useQuery({ queryKey: ['review'], queryFn: fetchReviewData })
+  const paragraphs = data?.text ? data.text.split('\n\n').filter(Boolean) : []
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
@@ -22,7 +37,7 @@ export function InterviewReviewPage() {
             <div className="text-center">
               <PlayCircle size={34} className="mx-auto mb-2 text-indigo-600 dark:text-indigo-400" />
               <p className="font-medium text-slate-900 dark:text-slate-100">Stub player</p>
-              <p className="text-sm">Future integration point for video SDK.</p>
+              <p className="text-sm">Playback is served from the video platform, not hosted by this app.</p>
             </div>
           </div>
         </CardContent>
@@ -31,20 +46,28 @@ export function InterviewReviewPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Transcript</CardTitle>
+            <div className="flex w-full items-center justify-between">
+              <CardTitle>Transcript</CardTitle>
+              {data && (
+                <div className="flex items-center gap-2">
+                  {data.source && <span className="text-xs text-slate-500 capitalize">{data.source.replace('_', ' ')}</span>}
+                  <Badge className={transcriptStatusClasses[data.status]}>{transcriptStatusLabels[data.status]}</Badge>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="max-h-[330px] space-y-3 overflow-auto pr-2">
-              {(data?.transcript ?? []).map((segment) => (
-                <div key={segment.id} className="rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70 p-3">
-                  <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
-                    <span>{segment.speaker}</span>
-                    <span>{segment.timestamp}</span>
+            {paragraphs.length > 0 ? (
+              <div className="max-h-[330px] space-y-3 overflow-auto pr-2">
+                {paragraphs.map((paragraph, index) => (
+                  <div key={index} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{paragraph}</p>
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">{segment.text}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No transcript text available yet.</p>
+            )}
           </CardContent>
         </Card>
 
