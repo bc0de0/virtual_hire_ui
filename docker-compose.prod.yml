@@ -1,0 +1,16 @@
+# Production-shaped build: static bundle served by nginx.
+# Run with: docker compose -f docker-compose.prod.yml up --build
+#
+# API_BASE_URL is read at container start (docker/entrypoint.sh), so
+# pointing at a different backend only needs a container restart, not a
+# rebuild.
+services:
+  web:
+    build:
+      context: .
+      target: runtime
+    ports:
+      - "8080:80"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://10.10.24.196:8000}
+    restart: unless-stopped

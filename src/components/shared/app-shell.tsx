@@ -1,17 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { BriefcaseBusiness, LayoutDashboard, MessagesSquare, Settings, Upload, CalendarClock, Video, BadgeCheck, PanelLeftClose, PanelLeftOpen, Sparkles, Moon, Sun } from 'lucide-react'
+import { BriefcaseBusiness, LayoutDashboard, MessagesSquare, Settings, Upload, CalendarClock, Video, BadgeCheck, PanelLeftClose, PanelLeftOpen, Plug, Moon, Sun } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 import { useThemeStore } from '../../stores/theme-store'
-import { interviews } from '../../api/fixtures'
+import { useAuthStore } from '../../stores/auth-store'
+import { api } from '../../api'
 
 const navigation = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/candidates/upload', label: 'Upload', icon: Upload },
   { to: '/interviews/schedule', label: 'Schedule', icon: CalendarClock },
   { to: '/interviews/live', label: 'Proctoring', icon: Video },
-  { to: '/interviews/review', label: 'Review', icon: MessagesSquare },
+  { to: '/interviews/review', label: 'Transcript', icon: MessagesSquare },
   { to: '/verdicts/report', label: 'Verdict', icon: BadgeCheck },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -21,7 +23,13 @@ export function AppShell() {
   const year = useMemo(() => new Date().getFullYear(), [])
   const theme = useThemeStore((state) => state.theme)
   const toggleTheme = useThemeStore((state) => state.toggleTheme)
-  const scheduledCount = interviews.filter((interview) => interview.status === 'scheduled').length
+  const hasToken = useAuthStore((state) => Boolean(state.token))
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: () => api.health.check(),
+    retry: false,
+    staleTime: 30_000,
+  })
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -63,10 +71,12 @@ export function AppShell() {
           <div className="mt-8 border-t border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-800">
             <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-800 dark:bg-slate-900/70">
               <div className="mb-2 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400" />
-                Mock backend ready
+                <Plug size={14} className={hasToken ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'} />
+                {hasToken ? 'Bearer token set' : 'No bearer token'}
               </div>
-              <p className="text-xs leading-5">The UI is wired to mocked data and can swap to real APIs behind the same client adapter.</p>
+              <p className="text-xs leading-5">
+                {hasToken ? 'Authenticated requests will include it.' : 'Set one in Settings to use authenticated endpoints.'}
+              </p>
             </div>
           </div>
         </aside>
@@ -84,10 +94,14 @@ export function AppShell() {
               >
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
               </Button>
-              <div className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Live sync • mock</div>
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                {scheduledCount} interviews scheduled
+                <span
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-full',
+                    healthQuery.isSuccess ? 'bg-emerald-400' : healthQuery.isError ? 'bg-rose-400' : 'bg-slate-400',
+                  )}
+                />
+                {healthQuery.isSuccess ? 'API connected' : healthQuery.isError ? 'API unreachable' : 'Checking API…'}
               </div>
             </div>
           </header>

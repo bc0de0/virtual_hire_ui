@@ -40,4 +40,8 @@ A running log of the prompts given to Claude Code for this project, in order. Se
 
 ---
 
+## 2026-07-18 — Prompt 7
+
+> destroy the scrtch dir and any associated code / scripts. Dockerize the full app to make it docker first. And wire the full api into the components removing the mocked state. Full api guide at http://10.10.24.196:8000/docs or find it in associated configs on backend remote or local.
+
 <!-- Append new prompts below this line, newest at the bottom, in the same "## YYYY-MM-DD — Prompt N" format. -->

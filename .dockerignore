@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+.git
+.gitignore
+*.local
+.vscode
+.idea
+README.md
+TESTING.md
+changelog.md
+prompt.md
+*.log

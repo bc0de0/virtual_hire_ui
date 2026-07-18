@@ -1,0 +1,16 @@
+# Docker-first local dev: `docker compose up --build` runs the Vite dev
+# server with hot reload against a bind-mounted source tree - no local
+# node/npm install needed. For a production-shaped build, see
+# docker-compose.prod.yml.
+services:
+  web:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: ${API_BASE_URL:-http://10.10.24.196:8000}
+    volumes:
+      - .:/app
+      - /app/node_modules

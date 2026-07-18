@@ -1,20 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
-import { AudioLines, PlayCircle } from 'lucide-react'
-import { request } from '../../api/client'
-import { transcript } from '../../api/fixtures'
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { AudioLines, FileText } from 'lucide-react'
+import { api, ApiError } from '../../api'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import { Textarea } from '../../components/ui/textarea'
+import { ErrorNote } from '../../components/shared/error-note'
 import type { TranscriptStatus } from '../../types'
-
-async function fetchReviewData() {
-  return request('review', async () => transcript)
-}
-
-const transcriptStatusLabels: Record<TranscriptStatus, string> = {
-  pending: 'Pending ingestion',
-  available: 'Available',
-  unavailable: 'Unavailable',
-}
 
 const transcriptStatusClasses: Record<TranscriptStatus, string> = {
   pending: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300',
@@ -23,71 +18,99 @@ const transcriptStatusClasses: Record<TranscriptStatus, string> = {
 }
 
 export function InterviewReviewPage() {
-  const { data } = useQuery({ queryKey: ['review'], queryFn: fetchReviewData })
-  const paragraphs = data?.text ? data.text.split('\n\n').filter(Boolean) : []
+  const [interviewId, setInterviewId] = useState('')
+  const [text, setText] = useState('')
+  const [language, setLanguage] = useState('en')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+
+  const ingest = useMutation({
+    mutationFn: () =>
+      api.transcripts.ingest({
+        interview_id: interviewId,
+        text: text || null,
+        language: language || null,
+        audio_file: audioFile,
+      }),
+  })
+
+  const canSubmit = Boolean(interviewId && (text || audioFile))
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Video playback</CardTitle>
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-indigo-600 dark:text-indigo-400" />
+            <CardTitle>Ingest transcript</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex h-56 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
-            <div className="text-center">
-              <PlayCircle size={34} className="mx-auto mb-2 text-indigo-600 dark:text-indigo-400" />
-              <p className="font-medium text-slate-900 dark:text-slate-100">Stub player</p>
-              <p className="text-sm">Playback is served from the video platform, not hosted by this app.</p>
-            </div>
+          <p className="text-xs text-slate-500">
+            POST /interviews/{'{interview_id}'}/transcript accepts platform-provided text or an audio file for STT, then queues
+            embedding — requires a bearer token (see Settings). There's no GET endpoint to re-fetch a transcript later, so this
+            page only shows the response from the ingestion call itself.
+          </p>
+          <div>
+            <Label htmlFor="interview-id">Interview id</Label>
+            <Input id="interview-id" value={interviewId} onChange={(event) => setInterviewId(event.target.value)} placeholder="uuid" />
           </div>
+          <div>
+            <Label htmlFor="transcript-text">Transcript text (platform-provided)</Label>
+            <Textarea
+              id="transcript-text"
+              rows={6}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Interviewer: ...\nCandidate: ..."
+            />
+          </div>
+          <div>
+            <Label htmlFor="transcript-language">Language (optional)</Label>
+            <Input id="transcript-language" value={language} onChange={(event) => setLanguage(event.target.value)} placeholder="en" />
+          </div>
+          <div>
+            <Label htmlFor="audio-file">Or upload an audio recording for STT</Label>
+            <input
+              id="audio-file"
+              type="file"
+              accept="audio/*"
+              onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700 dark:text-slate-400 dark:file:bg-indigo-500/10 dark:file:text-indigo-300"
+            />
+          </div>
+          <Button onClick={() => ingest.mutate()} disabled={!canSubmit || ingest.isPending}>
+            {ingest.isPending ? 'Ingesting…' : 'Ingest transcript'}
+          </Button>
+          {ingest.isError && (
+            <ErrorNote message={ingest.error instanceof ApiError ? ingest.error.message : 'Failed to ingest transcript.'} />
+          )}
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex w-full items-center justify-between">
-              <CardTitle>Transcript</CardTitle>
-              {data && (
-                <div className="flex items-center gap-2">
-                  {data.source && <span className="text-xs text-slate-500 capitalize">{data.source.replace('_', ' ')}</span>}
-                  <Badge className={transcriptStatusClasses[data.status]}>{transcriptStatusLabels[data.status]}</Badge>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {paragraphs.length > 0 ? (
-              <div className="max-h-[330px] space-y-3 overflow-auto pr-2">
-                {paragraphs.map((paragraph, index) => (
-                  <div key={index} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-800 dark:bg-slate-900/70">
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{paragraph}</p>
-                  </div>
-                ))}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AudioLines size={18} className="text-indigo-600 dark:text-indigo-400" />
+            <CardTitle>Ingestion result</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {ingest.isSuccess ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-100 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="font-mono text-xs text-slate-500">{ingest.data.id}</p>
+                <Badge className={transcriptStatusClasses[ingest.data.status]}>{ingest.data.status}</Badge>
               </div>
-            ) : (
-              <p className="text-sm text-slate-500">No transcript text available yet.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Audio waveform</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex h-24 items-end gap-2 rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70 p-4">
-              {[36, 56, 44, 70, 40, 58, 64].map((height, index) => (
-                <div key={index} className="flex-1 rounded-full bg-indigo-500/70" style={{ height: `${height}px` }} />
-              ))}
+              <p className="text-sm text-slate-600 dark:text-slate-300">Interview {ingest.data.interview_id}</p>
+              {ingest.data.source && <p className="mt-1 text-xs text-slate-500 capitalize">{ingest.data.source.replace('_', ' ')}</p>}
+              {ingest.data.language && <p className="text-xs text-slate-500">Language: {ingest.data.language}</p>}
+              <p className="mt-2 text-xs text-slate-500">Updated {new Date(ingest.data.updated_at).toLocaleString()}</p>
             </div>
-            <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-              <AudioLines size={16} className="text-indigo-600 dark:text-indigo-400" />
-              <span>Waveform placeholder for future audio analysis.</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <p className="text-sm text-slate-500">Submit a transcript to see the server's response here.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

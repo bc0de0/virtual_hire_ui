@@ -1,137 +1,72 @@
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, Clock3, Users } from 'lucide-react'
-import { request } from '../../api/client'
-import { candidates, interviews } from '../../api/fixtures'
-import { Badge } from '../../components/ui/badge'
+import { HeartPulse, Users, CalendarClock } from 'lucide-react'
+import { api } from '../../api'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
-import type { ApplicationStatus, InterviewStatus, VerdictLabel } from '../../types'
-
-async function fetchDashboardData() {
-  return request('dashboard', async () => ({
-    candidates,
-    interviews,
-  }))
-}
-
-const applicationStatusLabels: Record<ApplicationStatus, string> = {
-  submitted: 'Submitted',
-  screening: 'Screening',
-  interviewing: 'Interviewing',
-  offer: 'Offer',
-  hired: 'Hired',
-  rejected: 'Rejected',
-  withdrawn: 'Withdrawn',
-}
-
-const applicationStatusClasses: Record<ApplicationStatus, string> = {
-  submitted: 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
-  screening: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300',
-  interviewing: 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300',
-  offer: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300',
-  hired: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
-  rejected: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300',
-  withdrawn: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
-}
-
-const verdictLabelClasses: Record<VerdictLabel, string> = {
-  pass: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
-  review: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300',
-  fail: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300',
-}
-
-const interviewStatusClasses: Record<InterviewStatus, string> = {
-  scheduled: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300',
-  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
-  cancelled: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
-  no_show: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300',
-}
+import { EmptyState } from '../../components/shared/empty-state'
 
 export function DashboardPage() {
-  const { data } = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardData })
-
-  const items = data?.candidates ?? []
-  const interviewsList = data?.interviews ?? []
-  const pendingVerdicts = items.filter((candidate) => candidate.latest_verdict_label === null).length
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: () => api.health.check(),
+    retry: false,
+  })
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Interviews scheduled</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3 text-slate-900 dark:text-slate-100">
-              <Clock3 size={20} className="text-indigo-600 dark:text-indigo-400" />
-              <span className="text-3xl font-semibold">{interviewsList.filter((item) => item.status === 'scheduled').length}</span>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <HeartPulse size={18} className="text-indigo-600 dark:text-indigo-400" />
+            <CardTitle>API status</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {healthQuery.isPending && <p className="text-sm text-slate-500">Checking connection…</p>}
+          {healthQuery.isSuccess && (
+            <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              Connected to the Sift API — status: {healthQuery.data.status}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending verdicts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3 text-slate-900 dark:text-slate-100">
-              <AlertCircle size={20} className="text-amber-600 dark:text-amber-400" />
-              <span className="text-3xl font-semibold">{pendingVerdicts}</span>
+          )}
+          {healthQuery.isError && (
+            <div className="flex items-center gap-2 text-sm text-rose-700 dark:text-rose-400">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+              Could not reach the API. Check the base URL in Settings.
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Active pipeline</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3 text-slate-900 dark:text-slate-100">
-              <Users size={20} className="text-emerald-600 dark:text-emerald-400" />
-              <span className="text-3xl font-semibold">{items.length}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Pipeline overview</CardTitle>
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-indigo-600 dark:text-indigo-400" />
+              <CardTitle>Candidate pipeline</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {items.map((candidate) => (
-                <div key={candidate.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-800 dark:bg-slate-900/70">
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{candidate.full_name}</p>
-                    <p className="text-xs text-slate-500">{candidate.role_title}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={applicationStatusClasses[candidate.application_status]}>{applicationStatusLabels[candidate.application_status]}</Badge>
-                    {candidate.latest_verdict_label ? (
-                      <Badge className={verdictLabelClasses[candidate.latest_verdict_label]}>{candidate.latest_verdict_label}</Badge>
-                    ) : (
-                      <Badge className="border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">no verdict</Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No list-candidates endpoint yet"
+              description="The API supports submitting an application (Upload page) and reading a single verdict, but there's no route to list candidates or applications. This view will populate once that endpoint ships."
+            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming interviews</CardTitle>
+            <div className="flex items-center gap-2">
+              <CalendarClock size={18} className="text-indigo-600 dark:text-indigo-400" />
+              <CardTitle>Interview schedule</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
-            {interviewsList.map((interview) => (
-              <div key={interview.id} className="rounded-2xl border border-slate-200 bg-slate-100 p-3 dark:border-slate-800 dark:bg-slate-900/70">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-slate-900 dark:text-slate-100">{interview.candidate_name}</p>
-                  <Badge className={interviewStatusClasses[interview.status]}>{interview.status.replace('_', ' ')}</Badge>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">{new Date(interview.scheduled_at).toLocaleString()}</p>
-              </div>
-            ))}
+            <EmptyState
+              icon={CalendarClock}
+              title="No interview endpoints yet"
+              description="The API can ingest a transcript for an existing interview_id, but has no route to create, list, or schedule interviews. This view will populate once those endpoints ship."
+            />
           </CardContent>
         </Card>
       </div>
