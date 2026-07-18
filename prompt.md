@@ -34,4 +34,10 @@ A running log of the prompts given to Claude Code for this project, in order. Se
 
 ---
 
+## 2026-07-18 — Prompt 6
+
+> we want to add a ci.yml to this repo, but before that we need a comprehensive testing plan document in local root. Also, the testing should allow for playwrite and cromium based component testing and selinium based headless testing. How should we do it? give a full test plan with full coverage involving the backend repo as well if needed as a .md doc in root
+
+---
+
 <!-- Append new prompts below this line, newest at the bottom, in the same "## YYYY-MM-DD — Prompt N" format. -->
